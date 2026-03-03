@@ -18,7 +18,7 @@ WINDOWY = 600
 DISPLAYSURFACE = pygame.display.set_mode((WINDOWX, WINDOWY), 0, 32)
 pygame.display.set_caption("Bad Ideas Jam")
 
-#Rendering
+#__________Rendering__________
 WORLDX = WINDOWX / 2
 WORLDY = WINDOWY / 2
 WORLDSCALE = 10 #meters
@@ -41,9 +41,68 @@ def RenderBox(sizeX, sizeY, width, color):
     points = [(nx, ny), (nx, py), (px, py), (px, ny)]
     pygame.draw.lines(DISPLAYSURFACE, color, False, points, width)
 
-def DrawLeg(playerPosition: Vector2, legPosition, width, color):
-    RenderCircle(Color.GREEN, legPosition, player.radius / 2)
-    pygame.draw.line(DISPLAYSURFACE, color, RenderizeVector(playerPosition), RenderizeVector(legPosition), width)
+def DrawLeg(playerPosition: Vector2, leg: Leg, width, color):
+    RenderCircle(Color.GREEN, leg.foot.position, player.radius / 2)
+    if toggleLegs:
+        pygame.draw.line(DISPLAYSURFACE, color, RenderizeVector(playerPosition), RenderizeVector(leg.foot.position), width)
+
+#___________Physics Functions______________
+
+def Gravity(gForce, inAir):
+    
+    if inAir: #In Air
+
+        if gForce < maxGravity:
+            gForce += gravity
+
+        player.velocity.y -= gForce * gravityAcceleration * deltaTime
+    else: #On floor
+        gForce = 0
+        player.velocity.y = 0
+        player.position.y = floor + player.radius + 0.1
+
+    return gravityForce
+
+def LegPhysics():
+    for i in range(len(legs)):
+        #F = -fx Hookes Law
+        distance = Vector2.Distace(legs[i].foot.position, player.position)
+        displacement = legs[i].spring.targetDistance - distance
+        force = displacement * legs[i].spring.strength
+
+        direction = Vector2.Displacement(legs[i].foot.position, player.position).Normal()
+
+        player.velocity += direction * force * deltaTime
+
+def WallCollisions():
+    touchingWall = player.position.x + player.radius > boxX or player.position.x - player.radius < -boxX
+
+    if touchingWall:
+        player.velocity.x = player.velocity.x * -wallBounce
+        if player.position.x < 0:
+            player.position.x = -boxX + player.radius
+        elif player.position.x > 0:
+            player.position.x = boxX - player.radius
+
+def Friction(inAir):
+    if inAir:
+        if player.velocity.x > 0:
+            player.velocity.x -= airFriction * deltaTime
+        elif player.velocity.x < 0:
+            player.velocity.x += airFriction * deltaTime
+
+        if player.velocity.y > 0:
+            player.velocity.y -= airFriction * deltaTime
+        elif player.velocity.y < 0:
+            player.velocity.y += airFriction * deltaTime
+
+    else:
+
+        if player.velocity.x > 0:
+            player.velocity.x -= groundFriction * deltaTime
+        elif player.velocity.x < 0:
+            player.velocity.x += groundFriction * deltaTime
+
 
 #Debug Screen
 debugFont = pygame.font.SysFont("Arial", 15)
@@ -51,24 +110,33 @@ debugSurface = debugFont.render(f"FPS = {0}", False, Color.WHITE)
 
 #-----Initialize-----
 
-boxX = 10
-boxY = 10
+boxX = 20
+boxY = 20
 floor = -boxY
 
-gravity = 5
+gravity = 10
+gravityAcceleration = 2
 gravityForce = 0
 maxGravity = gravity * 10
-friction = 1
+groundFriction = 1
+airFriction = 0.1
 wallBounce = 1
+
+toggleLegs = True
+legStrength = 5
+legLength = 2
 
 inAir = True
 
-player = GameObject(Vector2(0, 0), Vector2(0, 0), 1)
-legs = list()
+player = GameObject(1, Vector2(0, 0), Vector2(0, 0))
+legs: list[Leg] = list()
 
-legs.append(GameObject(Vector2(0, 5), Vector2(0, 0), 1))
-legs.append(GameObject(Vector2(5, 0), Vector2(0, 0), 1))
-legs.append(GameObject(Vector2(-5, 0), Vector2(0, 0), 1))
+legs.append( Leg( 
+    GameObject(1, Vector2(-5, 0)), 
+    Spring(legStrength, legLength)))
+legs.append( Leg( 
+    GameObject(1, Vector2(5, 0)), 
+    Spring(legStrength, legLength)))
 
 jumpPower = 20
 speed = 5
@@ -93,8 +161,9 @@ while True:
     RenderBox(boxX, boxY, 1, Color.RED)
 
     #Render Legs
-    for leg in legs:
-        DrawLeg(player.position, leg.position, 2, Color.GREEN)
+    for i in range(len(legs)):
+        DrawLeg(player.position, legs[i], 2, Color.GREEN)
+        RenderCircle(Color.GREEN, legs[i].foot.position, legs[i].spring.targetDistance, 1)
 
     #Render Player
     RenderCircle(Color.BLACK, player.position, player.radius)
@@ -115,6 +184,18 @@ while True:
                 
             if event.key == pygame.K_d: #Right
                 dDown = True
+
+            if event.key == pygame.K_UP:
+                legs[0].spring.strength += 2
+
+            if event.key == pygame.K_DOWN:
+                legs[0].spring.strength -= 2
+
+            if event.key == pygame.K_l:
+                if toggleLegs == True:
+                    toggleLegs = False
+                else:
+                    toggleLegs = True
                 
         if event.type == pygame.KEYUP:
             if event.key == pygame.K_a:
@@ -130,30 +211,15 @@ while True:
     #Physics
 
     inAir = player.position.y - player.radius >= floor
-    touchingWall = player.position.x + player.radius > boxX or player.position.x - player.radius < -boxX
 
-    if inAir: #In Air
+    gravityForce = Gravity(gravityForce, inAir)
 
-        if gravityForce < maxGravity:
-            gravityForce += gravity
+    if toggleLegs:
+        LegPhysics()
 
-        player.velocity.y -= gravityForce * deltaTime
-    else: #On floor
-        gravityForce = 0
-        player.velocity.y = 0
-        player.position.y = floor + player.radius + 0.1
+    WallCollisions()
 
-        if player.velocity.x > 0:
-            player.velocity.x -= friction
-        elif player.velocity.x < 0:
-            player.velocity.x += friction
-
-    if touchingWall:
-        player.velocity.x = player.velocity.x * -wallBounce
-        if player.position.x < 0:
-            player.position.x = -boxX + player.radius
-        elif player.position.x > 0:
-            player.position.x = boxX - player.radius
+    Friction(inAir)
 
     #UpdatePostions
     player.UpdatePosition(deltaTime)
