@@ -1,6 +1,9 @@
 import sys, pygame, math
 from classes import *
 
+#TODO Remember to change this
+version = "0.2"
+
 class Camera:
     def __init__(self, position: Vector2, zoom):
         self.position = position
@@ -18,19 +21,25 @@ WINDOWY = 600
 DISPLAYSURFACE = pygame.display.set_mode((WINDOWX, WINDOWY), 0, 32)
 pygame.display.set_caption("Bad Ideas Jam")
 
+#____Utility Functions____
+def Toggle(toggle: bool):
+    if toggle == True:
+        toggle = False
+    else:
+        toggle = True
+    return toggle
+
 #__________Rendering__________
 WORLDX = WINDOWX / 2
 WORLDY = WINDOWY / 2
 WORLDSCALE = 10 #meters
-
-mainCamera = Camera(Vector2(0, 0), 1)
 
 def RenderizeVector(vector: Vector2):
     return ((vector.x * mainCamera.zoom * WORLDSCALE) + WORLDX + mainCamera.position.x,
              (vector.y * mainCamera.zoom * WORLDSCALE * -1) + WORLDY + mainCamera.position.y)
 
 def RenderCircle(color, position: Vector2, radius, width=0):
-    pygame.draw.circle(DISPLAYSURFACE, color, RenderizeVector(position), radius * WORLDSCALE, width)
+    pygame.draw.circle(DISPLAYSURFACE, color, RenderizeVector(position), radius * WORLDSCALE * mainCamera.zoom, width)
 
 def RenderBox(sizeX, sizeY, width, color):
     px = (sizeX * WORLDSCALE * mainCamera.zoom) + WORLDX + mainCamera.position.x
@@ -58,8 +67,8 @@ def Gravity(gForce, inAir):
         player.velocity.y -= gForce * gravityAcceleration * deltaTime
     else: #On floor
         gForce = 0
-        player.velocity.y = 0
-        player.position.y = floor + player.radius + 0.1
+        player.velocity.y = player.velocity.y * -floorBounce
+        player.position.y = floor + player.radius
 
     return gravityForce
 
@@ -105,33 +114,51 @@ def Friction(inAir):
 
 
 #Debug Screen
-debugFont = pygame.font.SysFont("Arial", 15)
+showDebug = False
+textSpacing = 15
+debugFont = pygame.font.SysFont("Arial", textSpacing)
+
 def DrawDebugScreen():
+    versionText = debugFont.render("Build v" + version, False, Color.RED)
+
     fpsDebug = debugFont.render(
         f"FPS = {math.floor(fpsClock.get_fps())}",
           False, Color.BLACK)
     playerDebug = debugFont.render(f"Player Position: {player.position}, Player Velocity {player.velocity}, InAir: {inAir}", 
                                    False, Color.BLACK)
-    worldDebug = debugFont.render(f"Gravidy = {gravity}, Ground Friction = {groundFriction}, Air Friction = {airFriction}", 
+    worldDebug = debugFont.render(f"Gravity = {gravity}, Ground Friction = {groundFriction}, Air Friction = {airFriction}", 
                                   False, Color.BLACK)
+    cameraDebug = debugFont.render(f"Zoom: {mainCamera.zoom}, Zoom Speed: {zoomSpeed}, Zoom Min: {zoomMin}", 
+                                   False, Color.BLACK)
     
-    DISPLAYSURFACE.blit(fpsDebug, (0, 0))
-    DISPLAYSURFACE.blit(playerDebug, (0, 15))
-    DISPLAYSURFACE.blit(worldDebug, (0, 30))
+    if showDebug:
+        DISPLAYSURFACE.blit(fpsDebug, (0, 0 * textSpacing))
+        DISPLAYSURFACE.blit(playerDebug, (0, 1 * textSpacing))
+        DISPLAYSURFACE.blit(worldDebug, (0, 2 * textSpacing))
+        DISPLAYSURFACE.blit(cameraDebug, (0, 3 * textSpacing))
+    
+    DISPLAYSURFACE.blit(versionText, (0, WINDOWY - textSpacing))
 
 #-----Initialize-----
 
-boxX = 20
-boxY = 20
+mainCamera = Camera(Vector2(0, 0), 1)
+zoomSpeed = 0.5
+zoomMin = zoomSpeed
+
+boxX = 50
+boxY = 50
 floor = -boxY
 
 gravity = 10
 gravityAcceleration = 2
 gravityForce = 0
 maxGravity = gravity * 10
+
 groundFriction = 1
 airFriction = 0.5
+
 wallBounce = 1
+floorBounce = 1
 
 toggleLegs = True
 legStrength = 5
@@ -163,6 +190,7 @@ while True:
 
     DISPLAYSURFACE.fill(Color.WHITE)
 
+    
     DrawDebugScreen()
 
     RenderBox(boxX, boxY, 1, Color.RED)
@@ -177,10 +205,12 @@ while True:
 
     #Events
     for event in pygame.event.get():
+        #Quit Game
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
         
+        #Key pressed
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_w: #Jump
                 gravityForce = 0
@@ -192,25 +222,34 @@ while True:
             if event.key == pygame.K_d: #Right
                 dDown = True
 
-            if event.key == pygame.K_UP:
+            if event.key == pygame.K_UP: #Debug
                 #legs[0].spring.strength += 2
                 airFriction += 0.1
 
-            if event.key == pygame.K_DOWN:
+            if event.key == pygame.K_DOWN: #Debug
                 #legs[0].spring.strength -= 2
                 airFriction -= 0.1
 
-            if event.key == pygame.K_l:
-                if toggleLegs == True:
-                    toggleLegs = False
-                else:
-                    toggleLegs = True
+            if event.key == pygame.K_SPACE:
+                toggleLegs = Toggle(toggleLegs)
+
+            if event.key == pygame.K_p:
+                showDebug = Toggle(showDebug)
                 
+        #Lift Key
         if event.type == pygame.KEYUP:
             if event.key == pygame.K_a:
                 aDown = False
             if event.key == pygame.K_d:
                 dDown = False
+
+        #Mouse Wheel (camera zoom)
+        if event.type == pygame.MOUSEWHEEL:
+            if mainCamera.zoom != zoomMin or event.y > 0:
+                mainCamera.zoom += event.y * zoomSpeed
+
+            if mainCamera.zoom < zoomMin:
+                mainCamera.zoom = zoomMin
 
     if aDown and player.velocity.x > -maxSpeed:
         player.velocity.x -= speed
