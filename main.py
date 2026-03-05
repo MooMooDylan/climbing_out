@@ -87,14 +87,14 @@ def WallCollisions():
 def Friction(inAir):
     if inAir:
         if player.velocity.x > 0:
-            player.velocity.x -= airFriction * deltaTime
+            player.velocity.x -= airFriction * player.velocity.Magnetude() * deltaTime
         elif player.velocity.x < 0:
-            player.velocity.x += airFriction * deltaTime
+            player.velocity.x += airFriction * player.velocity.Magnetude() * deltaTime
 
         if player.velocity.y > 0:
-            player.velocity.y -= airFriction * deltaTime
+            player.velocity.y -= airFriction * player.velocity.Magnetude() * deltaTime
         elif player.velocity.y < 0:
-            player.velocity.y += airFriction * deltaTime
+            player.velocity.y += airFriction * player.velocity.Magnetude() * deltaTime
 
     else:
 
@@ -106,7 +106,18 @@ def Friction(inAir):
 
 #Debug Screen
 debugFont = pygame.font.SysFont("Arial", 15)
-debugSurface = debugFont.render(f"FPS = {0}", False, Color.WHITE)
+def DrawDebugScreen():
+    fpsDebug = debugFont.render(
+        f"FPS = {math.floor(fpsClock.get_fps())}",
+          False, Color.BLACK)
+    playerDebug = debugFont.render(f"Player Position: {player.position}, Player Velocity {player.velocity}, InAir: {inAir}", 
+                                   False, Color.BLACK)
+    worldDebug = debugFont.render(f"Gravidy = {gravity}, Ground Friction = {groundFriction}, Air Friction = {airFriction}", 
+                                  False, Color.BLACK)
+    
+    DISPLAYSURFACE.blit(fpsDebug, (0, 0))
+    DISPLAYSURFACE.blit(playerDebug, (0, 15))
+    DISPLAYSURFACE.blit(worldDebug, (0, 30))
 
 #-----Initialize-----
 
@@ -119,7 +130,7 @@ gravityAcceleration = 2
 gravityForce = 0
 maxGravity = gravity * 10
 groundFriction = 1
-airFriction = 0.1
+airFriction = 0.5
 wallBounce = 1
 
 toggleLegs = True
@@ -152,11 +163,7 @@ while True:
 
     DISPLAYSURFACE.fill(Color.WHITE)
 
-    debugSurface = debugFont.render(
-        f"FPS = {math.floor(fpsClock.get_fps())}, Player Position: {player.position}, Player Velocity {player.velocity}, InAir: {inAir}",
-          False, Color.BLACK)
-    
-    DISPLAYSURFACE.blit(debugSurface, (0, 0))
+    DrawDebugScreen()
 
     RenderBox(boxX, boxY, 1, Color.RED)
 
@@ -186,10 +193,12 @@ while True:
                 dDown = True
 
             if event.key == pygame.K_UP:
-                legs[0].spring.strength += 2
+                #legs[0].spring.strength += 2
+                airFriction += 0.1
 
             if event.key == pygame.K_DOWN:
-                legs[0].spring.strength -= 2
+                #legs[0].spring.strength -= 2
+                airFriction -= 0.1
 
             if event.key == pygame.K_l:
                 if toggleLegs == True:
