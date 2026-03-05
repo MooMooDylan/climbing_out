@@ -11,11 +11,17 @@ This reposatory contains all the source code and assets for the project.
 Main Controls:
 
 SPACE - Enable / Disable Legs
+
 SCROLL WHEEL - Zoom in and out
+
 A / D - Apply force in given direcion
+
 W - Apply upward force
+
 P - Show Debug
 
 Dear testers,
-  Download installer.iss and follow instructions
+  Go to folder Output and download installer.exe and follow instructions
+  
   If you encounter a bug reporting it to me would be helpful :>
+
