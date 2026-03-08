@@ -1,0 +1,3 @@
+([('MyApplicationName',
+   '/Users/student/Documents/Programming/Python/jam/climbing_out/dist/MyApplicationName',
+   'EXECUTABLE')],)

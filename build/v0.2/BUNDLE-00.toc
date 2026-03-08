@@ -1,0 +1,3 @@
+([('v0.2',
+   '/Users/student/Documents/Programming/Python/jam/climbing_out/dist/v0.2',
+   'EXECUTABLE')],)
