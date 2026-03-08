@@ -128,7 +128,7 @@ def DrawDebugScreen():
                                    False, Color.BLACK)
     worldDebug = debugFont.render(f"Gravity = {gravity}, Ground Friction = {groundFriction}, Air Friction = {airFriction}", 
                                   False, Color.BLACK)
-    cameraDebug = debugFont.render(f"Zoom: {mainCamera.zoom}, Zoom Speed: {zoomSpeed}, Zoom Min: {zoomMin}", 
+    cameraDebug = debugFont.render(f"Camaera Pos: {mainCamera.position}, Zoom: {mainCamera.zoom}, Zoom Speed: {zoomSpeed}, Zoom Min: {zoomMin}", 
                                    False, Color.BLACK)
     
     if showDebug:
@@ -271,6 +271,9 @@ while True:
 
     #UpdatePostions
     player.UpdatePosition(deltaTime)
+
+    mainCamera.position.x = player.position.x * WORLDSCALE * mainCamera.zoom * -1
+    mainCamera.position.y = player.position.y * WORLDSCALE * mainCamera.zoom
 
     pygame.display.update()
     fpsClock.tick(FPS)
