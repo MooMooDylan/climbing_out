@@ -1,12 +1,14 @@
 from pygame import mixer
 from classes import Music
 
+#TODO: Figure out how to reduce buffer between tracks
+
 mixer.pre_init(44100, -16, 2, 50)
 
 folder = "assets/audio/slowdown/tracksOGG/"
 
 intro = [folder + "0_intro.ogg", folder + "1_buildup.ogg", folder + "2_transitiondrop.ogg"]
-body = [folder + "3_main.ogg", folder + "3_main.ogg" folder + "4_break.ogg"]
+body = [folder + "3_main.ogg", folder + "3_main.ogg", folder + "4_break.ogg"]
 outro = [folder + "5_slow.ogg", folder + "6_outro.ogg"]
 
 song = [intro, body, outro]
