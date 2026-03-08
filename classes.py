@@ -73,6 +73,15 @@ class Color:
     GREEN = (  0, 255,   0)
     BLUE =  (  0,   0, 255)
 
+class Music:
+    def __init__(self, songState, nextState, track, preTrack, timer: float, changedTrack: bool):
+        self.songState = songState
+        self.track = track
+        self.preTrack = preTrack
+        self.nextState = nextState
+        self.timer = timer
+        self.changedTrack = changedTrack
+
 class GameObject:
     def __init__(self, radius, initPosition: Vector2, initVelocity = Vector2(0, 0)):
         self.position = initPosition
@@ -81,6 +90,11 @@ class GameObject:
 
     def UpdatePosition(self, deltaTime):
         self.position += self.velocity * deltaTime
+
+class Camera:
+    def __init__(self, position: Vector2, zoom):
+        self.position = position
+        self.zoom = zoom
 
 class Spring:
     def __init__(self, strength, targetDistance):

@@ -1,13 +1,8 @@
-import sys, pygame, math
+import sys, pygame, math, audio
 from classes import *
 
 #TODO Remember to change this
 version = "0.2"
-
-class Camera:
-    def __init__(self, position: Vector2, zoom):
-        self.position = position
-        self.zoom = zoom
 
 pygame.init()
 
@@ -128,44 +123,58 @@ def DrawDebugScreen():
                                    False, Color.BLACK)
     worldDebug = debugFont.render(f"Gravity = {gravity}, Ground Friction = {groundFriction}, Air Friction = {airFriction}", 
                                   False, Color.BLACK)
-    cameraDebug = debugFont.render(f"Camaera Pos: {mainCamera.position}, Zoom: {mainCamera.zoom}, Zoom Speed: {zoomSpeed}, Zoom Min: {zoomMin}", 
+    cameraDebug = debugFont.render(f"Camera Pos: {mainCamera.position}, Zoom: {mainCamera.zoom}, Zoom Speed: {zoomSpeed}, Zoom Min: {zoomMin}", 
                                    False, Color.BLACK)
-    
+    musicDebug = debugFont.render(f"Current Track: ({song.songState}, {song.preTrack}), Target Track: ({song.nextState}, {song.track}) ", 
+                                  False, Color.BLACK)
+
     if showDebug:
         DISPLAYSURFACE.blit(fpsDebug, (0, 0 * textSpacing))
         DISPLAYSURFACE.blit(playerDebug, (0, 1 * textSpacing))
         DISPLAYSURFACE.blit(worldDebug, (0, 2 * textSpacing))
         DISPLAYSURFACE.blit(cameraDebug, (0, 3 * textSpacing))
+        DISPLAYSURFACE.blit(musicDebug, (0, 4 * textSpacing))
     
     DISPLAYSURFACE.blit(versionText, (0, WINDOWY - textSpacing))
 
 #-----Initialize-----
 
+#Camera
 mainCamera = Camera(Vector2(0, 0), 1)
 zoomSpeed = 0.5
 zoomMin = zoomSpeed
 
+#Box dimensions
 boxX = 50
 boxY = 50
 floor = -boxY
 
+#SFX
+song = Music(0, 0, 0, -1, 0, False)
+trackStart = pygame.time.get_ticks()
+
+#Gravity
 gravity = 10
 gravityAcceleration = 2
 gravityForce = 0
 maxGravity = gravity * 10
 
+#Friction
 groundFriction = 1
 airFriction = 0.5
 
+#Bounce
 wallBounce = 1
 floorBounce = 1
 
+#Legs
 toggleLegs = True
 legStrength = 5
 legLength = 2
 
 inAir = True
 
+#Player
 player = GameObject(1, Vector2(0, 0), Vector2(0, 0))
 legs: list[Leg] = list()
 
@@ -181,15 +190,17 @@ speed = 5
 maxSpeed = 10
 speedCap = 1
 
+#Input stuff
 aDown = False
 dDown = False
 
 #-----Main Loop-----
 while True:
     deltaTime = fpsClock.tick(FPS) / 1000
+    currentTime = pygame.time.get_ticks()
+    song.timer = (currentTime - trackStart) / 1000
 
     DISPLAYSURFACE.fill(Color.WHITE)
-
     
     DrawDebugScreen()
 
@@ -202,6 +213,10 @@ while True:
 
     #Render Player
     RenderCircle(Color.BLACK, player.position, player.radius)
+
+    song = audio.AudioManager(song.songState, song.nextState, song.track, song.preTrack, song.timer)
+    if song.changedTrack:
+        trackStart = pygame.time.get_ticks()
 
     #Events
     for event in pygame.event.get():
@@ -224,11 +239,13 @@ while True:
 
             if event.key == pygame.K_UP: #Debug
                 #legs[0].spring.strength += 2
-                airFriction += 0.1
+                song.nextState += 1
+                print(song.nextState)
 
             if event.key == pygame.K_DOWN: #Debug
                 #legs[0].spring.strength -= 2
-                airFriction -= 0.1
+                song.nextState -= 1
+                print(song.nextState)
 
             if event.key == pygame.K_SPACE:
                 toggleLegs = Toggle(toggleLegs)
