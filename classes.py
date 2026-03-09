@@ -1,7 +1,7 @@
 from math import sqrt
 from random import randint
+
 #Classes
- 
 class Vector2:
     def __init__(self, x: float, y: float):
         self.x = x
@@ -32,6 +32,10 @@ class Vector2:
     def Displacement(v1, v2):
         return Vector2(v2.x - v1.x, v2.y - v1.y)
     
+    @staticmethod
+    def TupleToVector2(Tuple: tuple):
+        return Vector2(Tuple[0], Tuple[1])
+
     def __add__(self, other):
         if type(other) == Vector2:
             return Vector2(self.x + other.x, self.y + other.y)
@@ -102,6 +106,7 @@ class Spring:
         self.strength = strength
         self.targetDistance = targetDistance
 
+#Made up of spring and gameObject
 class Leg:
     def __init__(self, foot: GameObject, spring: Spring):
         self.foot = foot

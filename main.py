@@ -33,6 +33,21 @@ def RenderizeVector(vector: Vector2):
     return ((vector.x * mainCamera.zoom * WORLDSCALE) + WORLDX + mainCamera.position.x,
              (vector.y * mainCamera.zoom * WORLDSCALE * -1) + WORLDY + mainCamera.position.y)
 
+def CalcMouseWorldSpace(vector: Vector2):
+    if vector.x != 0 and vector.y != 0:
+        return Vector2((vector.x / WORLDSCALE) - WORLDX - mainCamera.position.x, 
+                       (vector.y / WORLDSCALE * -1) - WORLDY - mainCamera.position.y)
+    
+    if vector.x == 0 and vector.y == 0:
+        return Vector2(0 - WORLDX - mainCamera.position.x, 
+                       0 - WORLDY - mainCamera.position.y)
+    elif vector.x == 0:
+        return Vector2(0 - WORLDX - mainCamera.position.x, 
+                       (vector.y / mainCamera.zoom / WORLDSCALE) - WORLDY - mainCamera.position.y)
+    else:
+        return Vector2((vector.x / mainCamera.zoom / WORLDSCALE) - WORLDX - mainCamera.position.x, 
+                       0 - WORLDY - mainCamera.position.y)
+
 def RenderCircle(color, position: Vector2, radius, width=0):
     pygame.draw.circle(DISPLAYSURFACE, color, RenderizeVector(position), radius * WORLDSCALE * mainCamera.zoom, width)
 
@@ -50,7 +65,7 @@ def DrawLeg(playerPosition: Vector2, leg: Leg, width, color):
     if toggleLegs:
         pygame.draw.line(DISPLAYSURFACE, color, RenderizeVector(playerPosition), RenderizeVector(leg.foot.position), width)
 
-#___________Physics Functions______________
+#___________Physics Functions____________
 
 def Gravity(gForce, inAir):
     
@@ -108,7 +123,7 @@ def Friction(inAir):
             player.velocity.x += groundFriction * deltaTime
 
 
-#Debug Screen
+#____________Debug Screen____________
 showDebug = False
 textSpacing = 15
 debugFont = pygame.font.SysFont("Arial", textSpacing)
@@ -121,19 +136,21 @@ def DrawDebugScreen():
           False, Color.BLACK)
     playerDebug = debugFont.render(f"Player Position: {player.position}, Player Velocity {player.velocity}, InAir: {inAir}", 
                                    False, Color.BLACK)
+    mouseDebug = debugFont.render(f"Mouse Screen Pos: {mouseScreenPos}", 
+                                  False, Color.BLACK)
     worldDebug = debugFont.render(f"Gravity = {gravity}, Ground Friction = {groundFriction}, Air Friction = {airFriction}", 
                                   False, Color.BLACK)
     cameraDebug = debugFont.render(f"Camera Pos: {mainCamera.position}, Zoom: {mainCamera.zoom}, Zoom Speed: {zoomSpeed}, Zoom Min: {zoomMin}", 
                                    False, Color.BLACK)
-    musicDebug = debugFont.render(f"Current Track: ({song.songState}, {song.preTrack}), Target Track: ({song.nextState}, {song.track}) ", 
+    musicDebug = debugFont.render(f"Current Track: ({song.songState}, {song.preTrack}), Queud Track: ({song.nextState}, {song.track}) ", 
                                   False, Color.BLACK)
 
+    #Determined Order
+    debugText = [fpsDebug, playerDebug, mouseDebug, worldDebug, cameraDebug, musicDebug]
+
     if showDebug:
-        DISPLAYSURFACE.blit(fpsDebug, (0, 0 * textSpacing))
-        DISPLAYSURFACE.blit(playerDebug, (0, 1 * textSpacing))
-        DISPLAYSURFACE.blit(worldDebug, (0, 2 * textSpacing))
-        DISPLAYSURFACE.blit(cameraDebug, (0, 3 * textSpacing))
-        DISPLAYSURFACE.blit(musicDebug, (0, 4 * textSpacing))
+        for i in range(len(debugText)):
+            DISPLAYSURFACE.blit(debugText[i], (0, i * textSpacing))
     
     DISPLAYSURFACE.blit(versionText, (0, WINDOWY - textSpacing))
 
@@ -143,6 +160,10 @@ def DrawDebugScreen():
 mainCamera = Camera(Vector2(0, 0), 1)
 zoomSpeed = 0.5
 zoomMin = zoomSpeed
+
+#Mouse
+mouseScreenPos = Vector2.TupleToVector2(pygame.mouse.get_pos())
+pygame.mouse.set_visible(False)
 
 #Box dimensions
 boxX = 50
@@ -161,7 +182,7 @@ maxGravity = gravity * 10
 
 #Friction
 groundFriction = 1
-airFriction = 0.5
+airFriction = 0.25
 
 #Bounce
 wallBounce = 1
@@ -214,6 +235,9 @@ while True:
     #Render Player
     RenderCircle(Color.BLACK, player.position, player.radius)
 
+    #Render Cursor
+    pygame.draw.circle(DISPLAYSURFACE, Color.BLUE, (mouseScreenPos.x, mouseScreenPos.y), 5)
+
     song = audio.AudioManager(song.songState, song.nextState, song.track, song.preTrack, song.timer)
     if song.changedTrack:
         trackStart = pygame.time.get_ticks()
@@ -259,6 +283,9 @@ while True:
                 aDown = False
             if event.key == pygame.K_d:
                 dDown = False
+
+        mouseScreenPos = Vector2.TupleToVector2(pygame.mouse.get_pos())
+        mouseWorldPos = CalcMouseWorldSpace(mouseScreenPos)
 
         #Mouse Wheel (camera zoom)
         if event.type == pygame.MOUSEWHEEL:

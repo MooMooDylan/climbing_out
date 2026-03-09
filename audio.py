@@ -20,8 +20,10 @@ def AudioManager(state, nextState, currentTrack, previousTrack, songTime):
 
     if previousTrack == -1:
         print(f"Play track {state, currentTrack}")
-
-        mixer.music.load(song[state][currentTrack])
+        try:
+            mixer.music.load(song[state][currentTrack])
+        except:
+            print(f"Failed to load {state}, {currentTrack}")
 
         mixer.music.play()
         
@@ -34,17 +36,27 @@ def AudioManager(state, nextState, currentTrack, previousTrack, songTime):
             state = nextState
 
         print(f"Queud track {state, nextSong}")
-        mixer.music.queue(song[state][nextSong])
+
+        try:
+            mixer.music.queue(song[state][nextSong])
+        except:
+            print(f"Failed to load {state}, {nextSong}")
 
         songTime = 0
 
         return Music(state, nextState, nextSong, currentTrack, songTime, True)
     
     previousState = state - 1
-    if previousState > len(song) - 1:
+    if previousState < len(song) - 1:
         previousState = 0
-    songLength = mixer.Sound(song[previousState][previousTrack]).get_length()
     
+    try:
+        songLength = mixer.Sound(song[previousState][previousTrack]).get_length()
+    except:
+        songLength = 100
+        print(f"Failed to find length of track {previousState}, {previousTrack}")
+
+
     if songTime >= songLength:
 
             if nextState == state:
@@ -56,7 +68,10 @@ def AudioManager(state, nextState, currentTrack, previousTrack, songTime):
                 state = nextState
 
             print(f"Queud track {state, nextSong}")
-            mixer.music.queue(song[state][nextSong])
+            try:
+                mixer.music.queue(song[state][nextSong])
+            except:
+                print(f"Failed to load {state}, {nextSong}")
 
             songTime = 0
 
