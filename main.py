@@ -1,4 +1,4 @@
-import sys, pygame, math, audio
+import sys, random, pygame, math, audio
 from classes import *
 
 #TODO Remember to change this
@@ -24,6 +24,18 @@ def Toggle(toggle: bool):
         toggle = True
     return toggle
 
+def FindClosestLeg(leg: list[Leg], position: Vector2): #position should be screen space
+    shortestDistance = sys.float_info.max
+    
+    for i in range(len(leg)):
+        distance = Vector2.Distace(leg[i].foot.position, position)
+    
+        if distance < shortestDistance:
+            shortestDistance = distance
+            closestLeg = i
+    
+    return closestLeg
+
 #__________Rendering__________
 WORLDX = WINDOWX / 2
 WORLDY = WINDOWY / 2
@@ -34,19 +46,8 @@ def RenderizeVector(vector: Vector2):
              (vector.y * mainCamera.zoom * WORLDSCALE * -1) + WORLDY + mainCamera.position.y)
 
 def CalcMouseWorldSpace(vector: Vector2):
-    if vector.x != 0 and vector.y != 0:
-        return Vector2((vector.x / WORLDSCALE) - WORLDX - mainCamera.position.x, 
-                       (vector.y / WORLDSCALE * -1) - WORLDY - mainCamera.position.y)
-    
-    if vector.x == 0 and vector.y == 0:
-        return Vector2(0 - WORLDX - mainCamera.position.x, 
-                       0 - WORLDY - mainCamera.position.y)
-    elif vector.x == 0:
-        return Vector2(0 - WORLDX - mainCamera.position.x, 
-                       (vector.y / mainCamera.zoom / WORLDSCALE) - WORLDY - mainCamera.position.y)
-    else:
-        return Vector2((vector.x / mainCamera.zoom / WORLDSCALE) - WORLDX - mainCamera.position.x, 
-                       0 - WORLDY - mainCamera.position.y)
+    return Vector2((vector.x - (WORLDX + mainCamera.position.x)) / (mainCamera.zoom * WORLDSCALE),
+                    (vector.y - (WORLDY + mainCamera.position.y)) / -(mainCamera.zoom * WORLDSCALE))
 
 def RenderCircle(color, position: Vector2, radius, width=0):
     pygame.draw.circle(DISPLAYSURFACE, color, RenderizeVector(position), radius * WORLDSCALE * mainCamera.zoom, width)
@@ -62,7 +63,7 @@ def RenderBox(sizeX, sizeY, width, color):
 
 def DrawLeg(playerPosition: Vector2, leg: Leg, width, color):
     RenderCircle(Color.GREEN, leg.foot.position, player.radius / 2)
-    if toggleLegs:
+    if leg.activated:
         pygame.draw.line(DISPLAYSURFACE, color, RenderizeVector(playerPosition), RenderizeVector(leg.foot.position), width)
 
 #___________Physics Functions____________
@@ -84,14 +85,15 @@ def Gravity(gForce, inAir):
 
 def LegPhysics():
     for i in range(len(legs)):
-        #F = -fx Hookes Law
-        distance = Vector2.Distace(legs[i].foot.position, player.position)
-        displacement = legs[i].spring.targetDistance - distance
-        force = displacement * legs[i].spring.strength
+        if (legs[i].activated):
+            #F = -fx Hookes Law
+            distance = Vector2.Distace(legs[i].foot.position, player.position)
+            displacement = legs[i].spring.targetDistance - distance
+            force = displacement * legs[i].spring.strength
 
-        direction = Vector2.Displacement(legs[i].foot.position, player.position).Normal()
+            direction = Vector2.Displacement(legs[i].foot.position, player.position).Normal()
 
-        player.velocity += direction * force * deltaTime
+            player.velocity += direction * force * deltaTime
 
 def WallCollisions():
     touchingWall = player.position.x + player.radius > boxX or player.position.x - player.radius < -boxX
@@ -136,7 +138,7 @@ def DrawDebugScreen():
           False, Color.BLACK)
     playerDebug = debugFont.render(f"Player Position: {player.position}, Player Velocity {player.velocity}, InAir: {inAir}", 
                                    False, Color.BLACK)
-    mouseDebug = debugFont.render(f"Mouse Screen Pos: {mouseScreenPos}", 
+    mouseDebug = debugFont.render(f"Mouse Screen Pos: {mouseScreenPos}, World Position: {mouseWorldPos}", 
                                   False, Color.BLACK)
     worldDebug = debugFont.render(f"Gravity = {gravity}, Ground Friction = {groundFriction}, Air Friction = {airFriction}", 
                                   False, Color.BLACK)
@@ -163,7 +165,8 @@ zoomMin = zoomSpeed
 
 #Mouse
 mouseScreenPos = Vector2.TupleToVector2(pygame.mouse.get_pos())
-pygame.mouse.set_visible(False)
+mouseWorldPos = CalcMouseWorldSpace(mouseScreenPos)
+pygame.mouse.set_visible(True)
 
 #Box dimensions
 boxX = 50
@@ -182,7 +185,7 @@ maxGravity = gravity * 10
 
 #Friction
 groundFriction = 1
-airFriction = 0.25
+airFriction = 0.2
 
 #Bounce
 wallBounce = 1
@@ -199,12 +202,16 @@ inAir = True
 player = GameObject(1, Vector2(0, 0), Vector2(0, 0))
 legs: list[Leg] = list()
 
-legs.append( Leg( 
-    GameObject(1, Vector2(-5, 0)), 
-    Spring(legStrength, legLength)))
-legs.append( Leg( 
-    GameObject(1, Vector2(5, 0)), 
-    Spring(legStrength, legLength)))
+for i in range(10):
+    x = random.randint(-boxX, boxX)
+    y = random.randint(-boxY, 100)
+
+    legs.append( Leg( 
+        GameObject(1, Vector2(x, y)), 
+        Spring(legStrength, legLength)))
+
+
+print(legs)
 
 jumpPower = 20
 speed = 5
@@ -236,7 +243,8 @@ while True:
     RenderCircle(Color.BLACK, player.position, player.radius)
 
     #Render Cursor
-    pygame.draw.circle(DISPLAYSURFACE, Color.BLUE, (mouseScreenPos.x, mouseScreenPos.y), 5)
+    #pygame.draw.circle(DISPLAYSURFACE, Color.BLUE, (mouseScreenPos.x, mouseScreenPos.y), 5)
+    RenderCircle(Color.BLUE, mouseWorldPos, 0.5)
 
     song = audio.AudioManager(song.songState, song.nextState, song.track, song.preTrack, song.timer)
     if song.changedTrack:
@@ -285,7 +293,13 @@ while True:
                 dDown = False
 
         mouseScreenPos = Vector2.TupleToVector2(pygame.mouse.get_pos())
-        mouseWorldPos = CalcMouseWorldSpace(mouseScreenPos)
+
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            print("Mouse Down")
+            if event.button == 1: #Left Click
+                print("Left click")
+                closestLeg = FindClosestLeg(legs, mouseWorldPos)
+                legs[closestLeg].activated = Toggle(legs[closestLeg].activated) #Find closest leg to mose and toggle activated
 
         #Mouse Wheel (camera zoom)
         if event.type == pygame.MOUSEWHEEL:
@@ -294,6 +308,9 @@ while True:
 
             if mainCamera.zoom < zoomMin:
                 mainCamera.zoom = zoomMin
+
+    
+    mouseWorldPos = CalcMouseWorldSpace(mouseScreenPos)
 
     if aDown and player.velocity.x > -maxSpeed:
         player.velocity.x -= speed
@@ -306,8 +323,7 @@ while True:
 
     gravityForce = Gravity(gravityForce, inAir)
 
-    if toggleLegs:
-        LegPhysics()
+    LegPhysics()
 
     WallCollisions()
 

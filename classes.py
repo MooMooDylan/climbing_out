@@ -26,7 +26,7 @@ class Vector2:
     
     @staticmethod
     def Distace(v1, v2):
-        return sqrt(((v1.x + v2.x) ** 2) + ((v1.y + v2.y) ** 2))
+        return sqrt(((v1.x - v2.x) ** 2) + ((v1.y - v2.y) ** 2))
     
     @staticmethod
     def Displacement(v1, v2):
@@ -102,12 +102,17 @@ class Camera:
 
 class Spring:
     def __init__(self, strength, targetDistance):
-        
         self.strength = strength
         self.targetDistance = targetDistance
+    
+    def __repr__(self):
+        return f"Strength - {self.strength}, Target Distance ; {self.targetDistance}"
 
 #Made up of spring and gameObject
 class Leg:
     def __init__(self, foot: GameObject, spring: Spring):
         self.foot = foot
         self.spring = spring
+        self.activated = False
+    def __repr__(self):
+        return f"Foot: {self.foot.position} | Spring: {self.spring}"
