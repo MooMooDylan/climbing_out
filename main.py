@@ -11,8 +11,8 @@ FPS = 60
 fpsClock = pygame.time.Clock()
 
 #Create Window
-WINDOWX = 800
-WINDOWY = 600
+WINDOWX = 1000
+WINDOWY = 800
 DISPLAYSURFACE = pygame.display.set_mode((WINDOWX, WINDOWY), 0, 32)
 pygame.display.set_caption("Bad Ideas Jam")
 
@@ -52,14 +52,21 @@ def CalcMouseWorldSpace(vector: Vector2):
 def RenderCircle(color, position: Vector2, radius, width=0):
     pygame.draw.circle(DISPLAYSURFACE, color, RenderizeVector(position), radius * WORLDSCALE * mainCamera.zoom, width)
 
-def RenderBox(sizeX, sizeY, width, color):
-    px = (sizeX * WORLDSCALE * mainCamera.zoom) + WORLDX + mainCamera.position.x
+def RenderBox(sizeX, sizeY, width, spaceColor, floorColor):
+    px = (sizeX * WORLDSCALE * mainCamera.zoom)
     py = (sizeY * WORLDSCALE * mainCamera.zoom) + WORLDY + mainCamera.position.y
     nx = (-sizeX * WORLDSCALE * mainCamera.zoom) + WORLDX + mainCamera.position.x
     ny = (-sizeY * WORLDSCALE * mainCamera.zoom) + WORLDY + mainCamera.position.y
-    #points = [(-x, y), (-x, -y), (x, -y), (x, y)]
-    points = [(nx, ny), (nx, py), (px, py), (px, ny)]
-    pygame.draw.lines(DISPLAYSURFACE, color, False, points, width)
+    #points = [(-x, -y), (-x, y), (x, y), (x, -y)]
+    
+    gameArea = pygame.rect.Rect((nx, 0), (px * 2, WINDOWY))
+    floor = pygame.rect.Rect((nx, py), (px * 2, WINDOWY))
+
+    pygame.draw.rect(DISPLAYSURFACE, spaceColor, gameArea)
+    pygame.draw.rect(DISPLAYSURFACE, floorColor, floor)
+
+    #points = [(nx, ny), (nx, py), (px + WORLDX + mainCamera.position.x, py), (px+WORLDX+mainCamera.position.x, ny)]
+    #pygame.draw.lines(DISPLAYSURFACE, Color.RED, False, points, width)
 
 def DrawLeg(playerPosition: Vector2, leg: Leg, width, color):
     RenderCircle(Color.GREEN, leg.foot.position, player.radius / 2)
@@ -131,21 +138,22 @@ textSpacing = 15
 debugFont = pygame.font.SysFont("Arial", textSpacing)
 
 def DrawDebugScreen():
+    debugColor = Color.WHITE
     versionText = debugFont.render("Build v" + version, False, Color.RED)
 
     fpsDebug = debugFont.render(
         f"FPS = {math.floor(fpsClock.get_fps())}",
-          False, Color.BLACK)
+          False, debugColor)
     playerDebug = debugFont.render(f"Player Position: {player.position}, Player Velocity {player.velocity}, InAir: {inAir}", 
-                                   False, Color.BLACK)
+                                   False, debugColor)
     mouseDebug = debugFont.render(f"Mouse Screen Pos: {mouseScreenPos}, World Position: {mouseWorldPos}", 
-                                  False, Color.BLACK)
+                                  False, debugColor)
     worldDebug = debugFont.render(f"Gravity = {gravity}, Ground Friction = {groundFriction}, Air Friction = {airFriction}", 
-                                  False, Color.BLACK)
+                                  False, debugColor)
     cameraDebug = debugFont.render(f"Camera Pos: {mainCamera.position}, Zoom: {mainCamera.zoom}, Zoom Speed: {zoomSpeed}, Zoom Min: {zoomMin}", 
-                                   False, Color.BLACK)
+                                   False, debugColor)
     musicDebug = debugFont.render(f"Current Track: ({song.songState}, {song.preTrack}), Queud Track: ({song.nextState}, {song.track}) ", 
-                                  False, Color.BLACK)
+                                  False, debugColor)
 
     #Determined Order
     debugText = [fpsDebug, playerDebug, mouseDebug, worldDebug, cameraDebug, musicDebug]
@@ -153,6 +161,8 @@ def DrawDebugScreen():
     if showDebug:
         for i in range(len(debugText)):
             DISPLAYSURFACE.blit(debugText[i], (0, i * textSpacing))
+
+        RenderCircle(Color.BLUE, mouseWorldPos, 0.5)
     
     DISPLAYSURFACE.blit(versionText, (0, WINDOWY - textSpacing))
 
@@ -202,9 +212,9 @@ inAir = True
 player = GameObject(1, Vector2(0, 0), Vector2(0, 0))
 legs: list[Leg] = list()
 
-for i in range(10):
+for i in range(20):
     x = random.randint(-boxX, boxX)
-    y = random.randint(-boxY, 100)
+    y = random.randint(-boxY, 500)
 
     legs.append( Leg( 
         GameObject(1, Vector2(x, y)), 
@@ -228,11 +238,9 @@ while True:
     currentTime = pygame.time.get_ticks()
     song.timer = (currentTime - trackStart) / 1000
 
-    DISPLAYSURFACE.fill(Color.WHITE)
-    
-    DrawDebugScreen()
+    DISPLAYSURFACE.fill(Color.BLACK)
 
-    RenderBox(boxX, boxY, 1, Color.RED)
+    RenderBox(boxX, boxY, 1, Color.GREY, Color.BLACK)
 
     #Render Legs
     for i in range(len(legs)):
@@ -240,11 +248,12 @@ while True:
         RenderCircle(Color.GREEN, legs[i].foot.position, legs[i].spring.targetDistance, 1)
 
     #Render Player
-    RenderCircle(Color.BLACK, player.position, player.radius)
+    RenderCircle(Color.WHITE, player.position, player.radius)
 
     #Render Cursor
     #pygame.draw.circle(DISPLAYSURFACE, Color.BLUE, (mouseScreenPos.x, mouseScreenPos.y), 5)
-    RenderCircle(Color.BLUE, mouseWorldPos, 0.5)
+
+    DrawDebugScreen()
 
     song = audio.AudioManager(song.songState, song.nextState, song.track, song.preTrack, song.timer)
     if song.changedTrack:
