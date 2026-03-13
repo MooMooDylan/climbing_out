@@ -212,6 +212,7 @@ inAir = True
 #Player
 player = GameObject(1, Vector2(0, 0), Vector2(0, 0))
 legs: list[Leg] = list()
+legsActivated: list[int] = list()
 
 for i in range(20):
     x = random.randint(-boxX, boxX)
@@ -292,7 +293,10 @@ while True:
                 print(song.nextState)
 
             if event.key == pygame.K_SPACE:
-                toggleLegs = Toggle(toggleLegs)
+                for i in legsActivated:
+                    legs[i].activated = False
+
+                legsActivated.clear()
 
             if event.key == pygame.K_p:
                 showDebug = Toggle(showDebug)
@@ -317,7 +321,15 @@ while True:
             if event.button == 1: #Left Click
                 print("Left click")
                 closestLeg = FindClosestLeg(legs, mouseWorldPos)
+
+                if legs[closestLeg].activated:
+                    legsActivated.remove(closestLeg)
+                else:
+                    legsActivated.append(closestLeg)
+                    
                 legs[closestLeg].activated = Toggle(legs[closestLeg].activated) #Find closest leg to mose and toggle activated
+                
+
 
         #Mouse Wheel (camera zoom)
         if event.type == pygame.MOUSEWHEEL:
