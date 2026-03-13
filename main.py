@@ -152,7 +152,7 @@ def DrawDebugScreen():
                                   False, debugColor)
     cameraDebug = debugFont.render(f"Camera Pos: {mainCamera.position}, Zoom: {mainCamera.zoom}, Zoom Speed: {zoomSpeed}, Zoom Min: {zoomMin}", 
                                    False, debugColor)
-    musicDebug = debugFont.render(f"Current Track: ({song.songState}, {song.preTrack}), Queud Track: ({song.nextState}, {song.track}) ", 
+    musicDebug = debugFont.render(f"Next Track: ({song.songState}, {song.preTrack}), Queud Track: ({song.nextState}, {song.track}) ", 
                                   False, debugColor)
 
     #Determined Order
@@ -186,6 +186,7 @@ floor = -boxY
 #SFX
 song = Music(0, 0, 0, -1, 0, False)
 trackStart = pygame.time.get_ticks()
+trackVolume = 1
 
 #Gravity
 gravity = 10
@@ -255,7 +256,9 @@ while True:
 
     DrawDebugScreen()
 
-    song = audio.AudioManager(song.songState, song.nextState, song.track, song.preTrack, song.timer)
+    if song.songState == 0 and song.track == 2: #Go from intro to main
+        song.nextState = 1
+    song = audio.AudioManager(song.songState, song.nextState, song.track, song.preTrack, song.timer, trackVolume)
     if song.changedTrack:
         trackStart = pygame.time.get_ticks()
 
@@ -293,6 +296,12 @@ while True:
 
             if event.key == pygame.K_p:
                 showDebug = Toggle(showDebug)
+
+            if event.key == pygame.K_m:
+                if trackVolume == 1:
+                    trackVolume = 0
+                else:
+                    trackVolume = 1
                 
         #Lift Key
         if event.type == pygame.KEYUP:

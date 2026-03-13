@@ -15,8 +15,8 @@ song = [intro, body, outro]
 
 
 
-def AudioManager(state, nextState, currentTrack, previousTrack, songTime):
-    mixer.music.set_volume(1)
+def AudioManager(state, nextState, currentTrack, previousTrack, songTime, volume):
+    mixer.music.set_volume(volume)
 
     if previousTrack == -1:
         print(f"Play track {state, currentTrack}")
