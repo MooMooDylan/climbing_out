@@ -1,7 +1,8 @@
-Bounce and Stretch
+Stretching Out
 A Game about leaving a box
 
 This project is my submission to the Bad Ideas Game Jam hosted by JonnyRazer
+This project doesn't run any AI code*
 
 My Socials:
 Youtube - https://www.youtube.com/@moomoodylan
@@ -25,3 +26,4 @@ Dear testers,
   
   If you encounter a bug reporting it to me would be helpful :>
 
+*Ai generated code in PyInstallerScript.py from Gemini. This code IS NOT used in any official build and was purely FOR TESTING. See more info in the file.
