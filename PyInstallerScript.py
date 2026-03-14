@@ -1,4 +1,6 @@
 #Thank you gemini
+#DISCLAIMER: I made this script to test making the game for mac. None of this code it used in any build
+#THIS IS PURELY FOR TESTING
 #This is so I can make a build on mac
 
 import PyInstaller.__main__

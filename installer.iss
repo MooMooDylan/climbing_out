@@ -2,16 +2,16 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 ; Non-commercial use only
 
-#define MyAppName "Bounce and Stretch"
-#define MyAppVersion "0.2"
+#define MyAppName "Stretching Out"
+#define MyAppVersion "0.3 alpha"
 #define MyAppPublisher "MooMooDylan"
-#define MyAppURL "https://github.com/MooMooDylan/climbing_out"
-#define MyAppExeName "v0.2.exe"
+#define MyAppURL "https://www.github.com/moomoodylan"
+#define MyAppExeName "v0.3.exe"
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application. Do not use the same AppId value in installers for other applications.
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
-AppId={{B8267B25-9EB8-4D51-B87C-C3E5DF8C1511}
+AppId={{616B8258-1BDE-469E-ABDE-68F55284328D}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 ;AppVerName={#MyAppName} {#MyAppVersion}
@@ -32,7 +32,7 @@ ArchitecturesInstallIn64BitMode=x64compatible
 DisableProgramGroupPage=yes
 ; Uncomment the following line to run in non administrative install mode (install for current user only).
 ;PrivilegesRequired=lowest
-OutputBaseFilename=installer
+OutputBaseFilename=mysetup
 SolidCompression=yes
 WizardStyle=classic
 
@@ -44,7 +44,6 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 Source: "C:\Users\Owner\Python Directiories\Bad_Ideas_Jam\dist\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Users\Owner\Python Directiories\Bad_Ideas_Jam\README.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "C:\Users\Owner\Python Directiories\Bad_Ideas_Jam\assets\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 

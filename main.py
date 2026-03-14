@@ -14,7 +14,12 @@ fpsClock = pygame.time.Clock()
 WINDOWX = 1000
 WINDOWY = 800
 DISPLAYSURFACE = pygame.display.set_mode((WINDOWX, WINDOWY), 0, 32)
-pygame.display.set_caption("Bad Ideas Jam")
+try:
+    iconImage = pygame.image.load("assets/sprites/notplayer.png")
+    pygame.display.set_icon(iconImage)
+except:
+    print("Failed to load icon image")
+pygame.display.set_caption("Stretching Out")
 
 #____Utility Functions____
 def Toggle(toggle: bool):
@@ -179,7 +184,7 @@ def DrawDebugScreen():
         RenderCircle(Color.BLUE, mouseWorldPos, 0.5)
     
     DISPLAYSURFACE.blit(versionText, (0, WINDOWY - textSpacing))
-    pygame.draw.lines(DISPLAYSURFACE, debugColor, False, [(0, WINDOWY), (WINDOWX, WINDOWY), (WINDOWX, 0)], 5)
+    #pygame.draw.lines(DISPLAYSURFACE, debugColor, False, [(0, WINDOWY), (WINDOWX, WINDOWY), (WINDOWX, 0)], 5)
 
 #___________Load Sprites___________
 
@@ -218,7 +223,7 @@ floor = -boxY
 #SFX
 song = Music(0, 0, 0, -1, 0, False)
 trackStart = pygame.time.get_ticks()
-trackVolume = 0
+trackVolume = 1
 
 #Gravity
 gravity = 10
