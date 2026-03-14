@@ -36,6 +36,9 @@ def FindClosestLeg(leg: list[Leg], position: Vector2): #position should be scree
     
     return closestLeg
 
+def OnScreen(screenPosition: tuple) -> bool:
+    return screenPosition[0] > -renderBuffer and screenPosition[0] < WINDOWX + renderBuffer and screenPosition[1] > -renderBuffer and screenPosition[1] < WINDOWY + renderBuffer
+
 #__________Rendering__________
 WORLDX = WINDOWX / 2
 WORLDY = WINDOWY / 2
@@ -69,9 +72,20 @@ def RenderBox(sizeX, sizeY, width, spaceColor, floorColor):
     #pygame.draw.lines(DISPLAYSURFACE, Color.RED, False, points, width)
 
 def DrawLeg(playerPosition: Vector2, leg: Leg, width, color):
-    RenderCircle(Color.GREEN, leg.foot.position, player.radius / 2)
+    #RenderCircle(Color.GREEN, leg.foot.position, player.radius / 2)
+
     if leg.activated:
         pygame.draw.line(DISPLAYSURFACE, color, RenderizeVector(playerPosition), RenderizeVector(leg.foot.position), width)
+        
+    RenderSprite(sprites[1], leg.foot.position, 1)
+
+def RenderSprite(sprite: pygame.surface.Surface, position: Vector2, radius=1, rotation=0):
+    screenPosition = RenderizeVector(position)
+    if OnScreen(screenPosition): #Check if on screen
+        sprite = pygame.transform.scale(sprite, (mainCamera.zoom * WORLDSCALE * 2, mainCamera.zoom * WORLDSCALE * 2))
+        spriteRect = sprite.get_rect()
+        spriteRect.center = screenPosition
+        DISPLAYSURFACE.blit(sprite, spriteRect)
 
 #___________Physics Functions____________
 
@@ -165,6 +179,23 @@ def DrawDebugScreen():
         RenderCircle(Color.BLUE, mouseWorldPos, 0.5)
     
     DISPLAYSURFACE.blit(versionText, (0, WINDOWY - textSpacing))
+    pygame.draw.lines(DISPLAYSURFACE, debugColor, False, [(0, WINDOWY), (WINDOWX, WINDOWY), (WINDOWX, 0)], 5)
+
+#___________Load Sprites___________
+
+spritefolder = "assets/sprites/"
+
+spriteFiles = ["player.png", "anchor.png"]
+
+sprites: list[pygame.surface.Surface] = list()
+
+for file in spriteFiles:
+    try:
+        sprites.append(pygame.image.load(spritefolder + file))
+    except:
+     print(f"Failed to load sprite: {spritefolder + file}")
+     sprites.append(pygame.surface.Surface((1, 1)))
+
 
 #-----Initialize-----
 
@@ -172,6 +203,7 @@ def DrawDebugScreen():
 mainCamera = Camera(Vector2(0, 0), 1)
 zoomSpeed = 0.5
 zoomMin = zoomSpeed
+renderBuffer = 20 #pixels
 
 #Mouse
 mouseScreenPos = Vector2.TupleToVector2(pygame.mouse.get_pos())
@@ -186,7 +218,7 @@ floor = -boxY
 #SFX
 song = Music(0, 0, 0, -1, 0, False)
 trackStart = pygame.time.get_ticks()
-trackVolume = 1
+trackVolume = 0
 
 #Gravity
 gravity = 10
@@ -250,10 +282,12 @@ while True:
         RenderCircle(Color.GREEN, legs[i].foot.position, legs[i].spring.targetDistance, 1)
 
     #Render Player
-    RenderCircle(Color.WHITE, player.position, player.radius)
+    #RenderCircle(Color.WHITE, player.position, player.radius)
+    RenderSprite(sprites[0], player.position, player.radius)
 
     #Render Cursor
     #pygame.draw.circle(DISPLAYSURFACE, Color.BLUE, (mouseScreenPos.x, mouseScreenPos.y), 5)
+    #Moved to Debug
 
     DrawDebugScreen()
 
