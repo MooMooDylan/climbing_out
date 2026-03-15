@@ -66,7 +66,7 @@ class Vector2:
                 raise ValueError("Can't divide by 0")
         else:
             raise TypeError("Vector2 can only be multiplied by scaler value")
-        
+    
     def __repr__(self) -> str:
         return f"({round(self.x, 5)}, {round(self.y, 5)})"
     

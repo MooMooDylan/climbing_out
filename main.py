@@ -82,12 +82,12 @@ def DrawLeg(playerPosition: Vector2, leg: Leg, width, color):
     if leg.activated:
         pygame.draw.line(DISPLAYSURFACE, color, RenderizeVector(playerPosition), RenderizeVector(leg.foot.position), width)
         
-    RenderSprite(sprites[1], leg.foot.position, 1)
+    RenderSprite(sprites[1], leg.foot.position, leg.foot.radius)
 
 def RenderSprite(sprite: pygame.surface.Surface, position: Vector2, radius=1, rotation=0):
     screenPosition = RenderizeVector(position)
     if OnScreen(screenPosition): #Check if on screen
-        sprite = pygame.transform.scale(sprite, (mainCamera.zoom * WORLDSCALE * 2, mainCamera.zoom * WORLDSCALE * 2))
+        sprite = pygame.transform.scale(sprite, (mainCamera.zoom * WORLDSCALE * radius * 2, mainCamera.zoom * WORLDSCALE * radius * 2))
         spriteRect = sprite.get_rect()
         spriteRect.center = screenPosition
         DISPLAYSURFACE.blit(sprite, spriteRect)
@@ -101,7 +101,7 @@ def Gravity(gForce, inAir):
         if gForce < maxGravity:
             gForce += gravity
 
-        player.velocity.y -= gForce * gravityAcceleration * deltaTime
+        player.velocity.y -= gForce * gravityAcceleration * deltaTime * len(lockedOn)
     else: #On floor
         gForce = 0
         player.velocity.y = player.velocity.y * -floorBounce
@@ -131,24 +131,24 @@ def WallCollisions():
         elif player.position.x > 0:
             player.position.x = boxX - player.radius
 
-def Friction(inAir):
+def Friction(inAir, object: GameObject, strength=1):
     if inAir:
-        if player.velocity.x > 0:
-            player.velocity.x -= airFriction * player.velocity.Magnetude() * deltaTime
+        if object.velocity.x > 0:
+            object.velocity.x -= airFriction * object.velocity.Magnetude() * deltaTime * strength
         elif player.velocity.x < 0:
-            player.velocity.x += airFriction * player.velocity.Magnetude() * deltaTime
+            object.velocity.x += airFriction * object.velocity.Magnetude() * deltaTime * strength
 
         if player.velocity.y > 0:
-            player.velocity.y -= airFriction * player.velocity.Magnetude() * deltaTime
+            object.velocity.y -= airFriction * object.velocity.Magnetude() * deltaTime * strength
         elif player.velocity.y < 0:
-            player.velocity.y += airFriction * player.velocity.Magnetude() * deltaTime
+            object.velocity.y += airFriction * object.velocity.Magnetude() * deltaTime * strength
 
     else:
 
-        if player.velocity.x > 0:
-            player.velocity.x -= groundFriction * deltaTime
-        elif player.velocity.x < 0:
-            player.velocity.x += groundFriction * deltaTime
+        if object.velocity.x > 0:
+            object.velocity.x -= groundFriction * deltaTime
+        elif object.velocity.x < 0:
+            object.velocity.x += groundFriction * deltaTime
 
 
 #____________Debug Screen____________
@@ -182,15 +182,38 @@ def DrawDebugScreen():
             DISPLAYSURFACE.blit(debugText[i], (0, i * textSpacing))
 
         RenderCircle(Color.BLUE, mouseWorldPos, 0.5)
+
+        RenderCircle(Color.RED, player.position, targetDistance, 1)
     
     DISPLAYSURFACE.blit(versionText, (0, WINDOWY - textSpacing))
     #pygame.draw.lines(DISPLAYSURFACE, debugColor, False, [(0, WINDOWY), (WINDOWX, WINDOWY), (WINDOWX, 0)], 5)
 
+#___________Enemy AI___________
+def EnemyAI():
+    for i in range(len(enemies)):
+        
+        distance = Vector2.Distace(enemies[i].position, player.position)
+
+        direction = player.position - enemies[i].position
+        direction = direction.Normal()
+
+        if distance > targetDistance * 8:
+            enemies[i].velocity = Vector2(0, 0)
+
+        if distance > targetDistance:
+            enemies[i].velocity += direction * enemySpeed
+            if i in lockedOn:
+                lockedOn.remove(i)
+        elif distance < targetDistance:
+            enemies[i].velocity = player.velocity - direction * enemySpeed
+            if i not in lockedOn:
+                lockedOn.append(i)
+          
 #___________Load Sprites___________
 
 spritefolder = "assets/sprites/"
 
-spriteFiles = ["player.png", "anchor.png"]
+spriteFiles = ["player.png", "anchor.png", "enemy.png"]
 
 sprites: list[pygame.surface.Surface] = list()
 
@@ -223,11 +246,11 @@ floor = -boxY
 #SFX
 song = Music(0, 0, 0, -1, 0, False)
 trackStart = pygame.time.get_ticks()
-trackVolume = 1
+trackVolume = 0
 
 #Gravity
-gravity = 10
-gravityAcceleration = 2
+gravity = 15
+gravityAcceleration = 3
 gravityForce = 0
 maxGravity = gravity * 10
 
@@ -246,30 +269,40 @@ legLength = 2
 
 inAir = True
 
-#Player
-player = GameObject(1, Vector2(0, 0), Vector2(0, 0))
+#**Player**
+player = GameObject(2, Vector2(0, -boxY + 2), Vector2(0, 0))
 legs: list[Leg] = list()
 legsActivated: list[int] = list()
 
-for i in range(20):
+#**Anchors**
+for i in range(50):
     x = random.randint(-boxX, boxX)
-    y = random.randint(-boxY, 500)
+    y = random.randint(-boxY, 2000)
 
     legs.append( Leg( 
-        GameObject(1, Vector2(x, y)), 
+        GameObject(2, Vector2(x, y)), 
         Spring(legStrength, legLength)))
+    
+#**Enemies**
+targetDistance = 20
+enemySpeed = 1
+enemies: list[GameObject] = list()
+lockedOn: list[int] = list()
+maxSpeed = 50
 
+for i in range(10):
+    x = random.randint(-boxX, boxX)
+    y = random.randint(0, 500)
 
-print(legs)
+    enemies.append(GameObject(2, Vector2(x, y)))
 
-jumpPower = 20
-speed = 5
-maxSpeed = 10
-speedCap = 1
+#jumpPower = 20
+#speed = 5
+#speedCap = 1
 
 #Input stuff
-aDown = False
-dDown = False
+#aDown = False
+#dDown = False
 
 #-----Main Loop-----
 while True:
@@ -285,6 +318,12 @@ while True:
     for i in range(len(legs)):
         DrawLeg(player.position, legs[i], 2, Color.GREEN)
         RenderCircle(Color.GREEN, legs[i].foot.position, legs[i].spring.targetDistance, 1)
+
+    #Render Enemy
+    for i in lockedOn:
+        pygame.draw.line(DISPLAYSURFACE, Color.RED, RenderizeVector(player.position), RenderizeVector(enemies[i].position), 2)
+    for enemy in enemies:
+        RenderSprite(sprites[2], enemy.position, enemy.radius)
 
     #Render Player
     #RenderCircle(Color.WHITE, player.position, player.radius)
@@ -311,16 +350,16 @@ while True:
         
         #Key pressed
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_w: #Jump
-                gravityForce = 0
-                player.velocity.y = jumpPower
-
-            if event.key == pygame.K_a: #Left
-                aDown = True
-                
-            if event.key == pygame.K_d: #Right
-                dDown = True
-
+#            if event.key == pygame.K_w: #Jump
+#               gravityForce = 0
+#               player.velocity.y = jumpPower
+#
+#           if event.key == pygame.K_a: #Left
+#               aDown = True
+#               
+#           if event.key == pygame.K_d: #Right
+#               dDown = True
+#
             if event.key == pygame.K_UP: #Debug
                 #legs[0].spring.strength += 2
                 song.nextState += 1
@@ -381,11 +420,6 @@ while True:
     
     mouseWorldPos = CalcMouseWorldSpace(mouseScreenPos)
 
-    if aDown and player.velocity.x > -maxSpeed:
-        player.velocity.x -= speed
-    if dDown and player.velocity.x < maxSpeed:
-        player.velocity.x += speed
-
     #Physics
 
     inAir = player.position.y - player.radius >= floor
@@ -396,10 +430,17 @@ while True:
 
     WallCollisions()
 
-    Friction(inAir)
+    Friction(inAir, player)
+    Friction(True, enemies[0])
+
+    #AI
+    EnemyAI()
 
     #UpdatePostions
     player.UpdatePosition(deltaTime)
+
+    for enemy in enemies:
+        enemy.UpdatePosition(deltaTime)
 
     mainCamera.position.x = player.position.x * WORLDSCALE * mainCamera.zoom * -1
     mainCamera.position.y = player.position.y * WORLDSCALE * mainCamera.zoom
