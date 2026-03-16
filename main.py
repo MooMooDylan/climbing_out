@@ -31,6 +31,7 @@ def Toggle(toggle: bool):
 
 def FindClosestLeg(leg: list[Leg], position: Vector2): #position should be screen space
     shortestDistance = sys.float_info.max
+    closestLeg = -1
     
     for i in range(len(leg)):
         distance = Vector2.Distace(leg[i].foot.position, position)
@@ -43,6 +44,14 @@ def FindClosestLeg(leg: list[Leg], position: Vector2): #position should be scree
 
 def OnScreen(screenPosition: tuple) -> bool:
     return screenPosition[0] > -renderBuffer and screenPosition[0] < WINDOWX + renderBuffer and screenPosition[1] > -renderBuffer and screenPosition[1] < WINDOWY + renderBuffer
+
+def ListIncludes(list, item):
+    count = 0
+    for i in list:
+        if i == item:
+            count += 1
+    
+    return count > 0
 
 #__________Rendering__________
 WORLDX = WINDOWX / 2
@@ -173,9 +182,11 @@ def DrawDebugScreen():
                                    False, debugColor)
     musicDebug = debugFont.render(f"Next Track: ({song.songState}, {song.preTrack}), Queud Track: ({song.nextState}, {song.track}) ", 
                                   False, debugColor)
+    objectsDebug = debugFont.render(f"Anchors: {len(legs)}, Enemies: {len(enemies)}", 
+                                    False, debugColor)
 
     #Determined Order
-    debugText = [fpsDebug, playerDebug, mouseDebug, worldDebug, cameraDebug, musicDebug]
+    debugText = [fpsDebug, playerDebug, mouseDebug, worldDebug, cameraDebug, musicDebug, objectsDebug]
 
     if showDebug:
         for i in range(len(debugText)):
@@ -227,6 +238,10 @@ for file in spriteFiles:
 
 #-----Initialize-----
 
+gameSeed = 35
+
+random.seed(gameSeed)
+
 #Camera
 mainCamera = Camera(Vector2(0, 0), 1)
 zoomSpeed = 0.5
@@ -271,17 +286,21 @@ inAir = True
 
 #**Player**
 player = GameObject(2, Vector2(0, -boxY + 2), Vector2(0, 0))
+
 legs: list[Leg] = list()
 legsActivated: list[int] = list()
 
 #**Anchors**
-for i in range(50):
-    x = random.randint(-boxX, boxX)
-    y = random.randint(-boxY, 2000)
+#for i in range(50):
+#   x = random.randint(-boxX, boxX)
+#   y = random.randint(-boxY, 2000)
+#
+#   legs.append( Leg( 
+#       GameObject(2, Vector2(x, y)), 
+#       Spring(legStrength, legLength)))
 
-    legs.append( Leg( 
-        GameObject(2, Vector2(x, y)), 
-        Spring(legStrength, legLength)))
+sections: list[Section] = [Section(20, boxY, 500, boxX, 0)]
+sectionsLoaded = list()
     
 #**Enemies**
 targetDistance = 20
@@ -309,6 +328,21 @@ while True:
     deltaTime = fpsClock.tick(FPS) / 1000
     currentTime = pygame.time.get_ticks()
     song.timer = (currentTime - trackStart) / 1000
+
+    for i in range(len(sections)):
+        if player.position.x > sections[i].floor and not ListIncludes(sectionsLoaded, i):
+
+            for point in sections[0].positions:
+                legs.append(Leg( 
+                    GameObject(2, Vector2(point.x, point.y)), 
+                    Spring(legStrength, legLength)))
+                
+            sectionsLoaded.append(i)
+
+        if player.position.x >= sections[i].ceiling and ListIncludes(sectionsLoaded, i):
+            legs.clear()
+
+            sectionsLoaded.remove(i)
 
     DISPLAYSURFACE.fill(Color.BLACK)
 

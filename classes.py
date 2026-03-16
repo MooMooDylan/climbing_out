@@ -117,3 +117,16 @@ class Leg:
         self.activated = False
     def __repr__(self):
         return f"Foot: {self.foot.position} | Spring: {self.spring}"
+    
+class Section:
+    def __init__(self, worldBase, points, hieght, width, id):
+        self.floor = (hieght * id) - worldBase
+        self.ceiling = self.floor + hieght
+
+        self.positions: list[Vector2] = list()
+
+        for i in range(points):
+            x = randint(-width, width)
+            y = randint(self.floor, self.ceiling)
+
+            self.positions.append(Vector2(x, y))
