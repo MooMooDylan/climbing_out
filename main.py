@@ -108,15 +108,15 @@ def Gravity(gForce, inAir):
     if inAir: #In Air
 
         if gForce < maxGravity:
-            gForce += gravity
+            gForce += gravity * gravityAcceleration
 
-        player.velocity.y -= gForce * gravityAcceleration * deltaTime * len(lockedOn)
+        player.velocity.y -= gForce * deltaTime * len(lockedOn) + 1
     else: #On floor
         gForce = 0
         player.velocity.y = player.velocity.y * -floorBounce
         player.position.y = floor + player.radius
 
-    return gravityForce
+    return gForce
 
 def LegPhysics():
     for i in range(len(legs)):
@@ -182,7 +182,7 @@ def DrawDebugScreen():
                                    False, debugColor)
     musicDebug = debugFont.render(f"Next Track: ({song.songState}, {song.preTrack}), Queud Track: ({song.nextState}, {song.track}) ", 
                                   False, debugColor)
-    objectsDebug = debugFont.render(f"Anchors: {len(legs)}, Enemies: {len(enemies)}", 
+    objectsDebug = debugFont.render(f"Anchors: {len(legs)}, Enemies: {len(enemies)}, Sections Loaded: {len(sectionsLoaded)}, Sections Cached: {len(sectionCache)}", 
                                     False, debugColor)
 
     #Determined Order
@@ -195,11 +195,14 @@ def DrawDebugScreen():
         RenderCircle(Color.BLUE, mouseWorldPos, 0.5)
 
         RenderCircle(Color.RED, player.position, targetDistance, 1)
+
+        for section in sections:
+            pygame.draw.line(DISPLAYSURFACE, Color.RED, RenderizeVector(Vector2(-boxX, section.ceiling)), RenderizeVector(Vector2(boxX, section.ceiling)))
     
     DISPLAYSURFACE.blit(versionText, (0, WINDOWY - textSpacing))
     #pygame.draw.lines(DISPLAYSURFACE, debugColor, False, [(0, WINDOWY), (WINDOWX, WINDOWY), (WINDOWX, 0)], 5)
 
-#___________Enemy AI___________
+#___________Game Logic___________
 def EnemyAI():
     for i in range(len(enemies)):
         
@@ -220,6 +223,59 @@ def EnemyAI():
             if i not in lockedOn:
                 lockedOn.append(i)
           
+def SectionLogic():
+    for i in range(len(sections)):
+        
+        aboveFloor = player.position.y > sections[i].floor
+        aboveCeiling = player.position.y >= sections[i].ceiling
+
+        #print(f"{i}: {sectionsLoaded} , {ListIncludes(sectionsLoaded, i)}, {aboveFloor} {aboveCeiling} {sections[i].floor}")
+
+        if aboveFloor and not ListIncludes(sectionsLoaded, i) and not aboveCeiling: #Inside this section and not loaded
+
+            print(f"Load Section {i}")
+            sectionsLoaded.append(i)
+
+            for point in sections[i].positions:
+                print(sectionsLoaded.index(i) * sectionAnchors)
+                legs.insert(sectionsLoaded.index(i) * sectionAnchors, Leg( 
+                    GameObject(2, Vector2(point.x, point.y)), 
+                    Spring(legStrength, legLength)))
+
+        elif aboveCeiling and ListIncludes(sectionsLoaded, i): #Above this section and loaded
+            
+            base = sectionAnchors * (i - sectionsLoaded[0])
+
+           
+
+            for j in range(base + (sectionAnchors - 1), base - 1, -1):
+                legs.pop(j)
+
+            print(f"Deload Section {i}")
+            print(base, "<-", base + (sectionAnchors - 1))
+            sectionsLoaded.remove(i)
+
+            if not ListIncludes(sectionCache, i + 1):
+                print(sectionCache)
+                sections.append(Section(boxY, sectionAnchors, sectionHeight, boxX, i + 1))
+                sectionCache.append(i + 1)
+                print(f"Initialize Section {i + 1}")
+
+        elif not aboveFloor and ListIncludes(sectionsLoaded, i): #Below this section and loaded
+            base = sectionAnchors * (i - sectionsLoaded[1])
+
+            for j in range(base + (sectionAnchors - 1), base - 1, -1):
+                legs.pop(j)
+
+            print(f"Deload Section {i}")
+            print(base, "<-", base + (sectionAnchors - 1))
+            sectionsLoaded.remove(i)
+
+        
+                
+            
+            
+        
 #___________Load Sprites___________
 
 spritefolder = "assets/sprites/"
@@ -240,7 +296,7 @@ for file in spriteFiles:
 
 gameSeed = 35
 
-random.seed(gameSeed)
+#random.seed(gameSeed)
 
 #Camera
 mainCamera = Camera(Vector2(0, 0), 1)
@@ -265,7 +321,7 @@ trackVolume = 0
 
 #Gravity
 gravity = 15
-gravityAcceleration = 3
+gravityAcceleration = 2
 gravityForce = 0
 maxGravity = gravity * 10
 
@@ -299,8 +355,12 @@ legsActivated: list[int] = list()
 #       GameObject(2, Vector2(x, y)), 
 #       Spring(legStrength, legLength)))
 
-sections: list[Section] = [Section(20, boxY, 500, boxX, 0)]
+sectionAnchors = 20
+sectionHeight = 500
+
+sections: list[Section] = [Section(boxY, sectionAnchors, sectionHeight, boxX, 0)]
 sectionsLoaded = list()
+sectionCache = [0]
     
 #**Enemies**
 targetDistance = 20
@@ -309,7 +369,7 @@ enemies: list[GameObject] = list()
 lockedOn: list[int] = list()
 maxSpeed = 50
 
-for i in range(10):
+for i in range(1):
     x = random.randint(-boxX, boxX)
     y = random.randint(0, 500)
 
@@ -329,20 +389,7 @@ while True:
     currentTime = pygame.time.get_ticks()
     song.timer = (currentTime - trackStart) / 1000
 
-    for i in range(len(sections)):
-        if player.position.x > sections[i].floor and not ListIncludes(sectionsLoaded, i):
-
-            for point in sections[0].positions:
-                legs.append(Leg( 
-                    GameObject(2, Vector2(point.x, point.y)), 
-                    Spring(legStrength, legLength)))
-                
-            sectionsLoaded.append(i)
-
-        if player.position.x >= sections[i].ceiling and ListIncludes(sectionsLoaded, i):
-            legs.clear()
-
-            sectionsLoaded.remove(i)
+    SectionLogic()
 
     DISPLAYSURFACE.fill(Color.BLACK)
 
@@ -397,12 +444,12 @@ while True:
             if event.key == pygame.K_UP: #Debug
                 #legs[0].spring.strength += 2
                 song.nextState += 1
-                print(song.nextState)
+                #print(song.nextState)
 
             if event.key == pygame.K_DOWN: #Debug
                 #legs[0].spring.strength -= 2
                 song.nextState -= 1
-                print(song.nextState)
+                #print(song.nextState)
 
             if event.key == pygame.K_SPACE:
                 for i in legsActivated:
@@ -429,15 +476,18 @@ while True:
         mouseScreenPos = Vector2.TupleToVector2(pygame.mouse.get_pos())
 
         if event.type == pygame.MOUSEBUTTONDOWN:
-            print("Mouse Down")
+            #print("Mouse Down")
             if event.button == 1: #Left Click
-                print("Left click")
+                #print("Left click")
                 closestLeg = FindClosestLeg(legs, mouseWorldPos)
 
-                if legs[closestLeg].activated:
-                    legsActivated.remove(closestLeg)
-                else:
-                    legsActivated.append(closestLeg)
+                try:
+                    if legs[closestLeg].activated:
+                        legsActivated.remove(closestLeg)
+                    else:
+                        legsActivated.append(closestLeg)
+                except:
+                    print("No legs")
                     
                 legs[closestLeg].activated = Toggle(legs[closestLeg].activated) #Find closest leg to mose and toggle activated
                 
@@ -457,15 +507,15 @@ while True:
     #Physics
 
     inAir = player.position.y - player.radius >= floor
+    
+    Friction(inAir, player)
+    Friction(True, enemies[0])
 
     gravityForce = Gravity(gravityForce, inAir)
 
     LegPhysics()
 
     WallCollisions()
-
-    Friction(inAir, player)
-    Friction(True, enemies[0])
 
     #AI
     EnemyAI()
