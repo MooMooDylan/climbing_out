@@ -101,6 +101,22 @@ def RenderSprite(sprite: pygame.surface.Surface, position: Vector2, radius=1, ro
         spriteRect.center = screenPosition
         DISPLAYSURFACE.blit(sprite, spriteRect)
 
+def CameraSystem():
+    cameraWarp = 50
+    playerVelocity = player.velocity.Magnetude()
+    playerWarpSpeed = 50
+
+    if not manualZoomControl:
+
+        if playerVelocity != 0 and playerVelocity > playerWarpSpeed:
+            mainCamera.zoom = 1 / playerVelocity * cameraWarp
+
+            if mainCamera.zoom <  1 / zoomMax:
+                mainCamera.zoom = 1 / zoomMax
+
+            if mainCamera.zoom > 1:
+                mainCamera.zoom = 1
+
 #___________Physics Functions____________
 
 def Gravity(gForce, inAir):
@@ -288,8 +304,8 @@ for file in spriteFiles:
     try:
         sprites.append(pygame.image.load(spritefolder + file))
     except:
-     print(f"Failed to load sprite: {spritefolder + file}")
-     sprites.append(pygame.surface.Surface((1, 1)))
+        print(f"Failed to load sprite: {spritefolder + file}")
+        sprites.append(pygame.surface.Surface((1, 1)))
 
 
 #-----Initialize-----
@@ -302,7 +318,9 @@ gameSeed = 35
 mainCamera = Camera(Vector2(0, 0), 1)
 zoomSpeed = 0.5
 zoomMin = zoomSpeed
+zoomMax = 2.5
 renderBuffer = 20 #pixels
+manualZoomControl = True
 
 #Mouse
 mouseScreenPos = Vector2.TupleToVector2(pygame.mouse.get_pos())
@@ -389,6 +407,10 @@ while True:
     currentTime = pygame.time.get_ticks()
     song.timer = (currentTime - trackStart) / 1000
 
+    CameraSystem()
+
+    CameraSystem()
+
     SectionLogic()
 
     DISPLAYSURFACE.fill(Color.BLACK)
@@ -451,6 +473,12 @@ while True:
                 song.nextState -= 1
                 #print(song.nextState)
 
+            if event.key == pygame.K_z: #Debug
+                manualCameraControl = Toggle(manualZoomControl)
+
+            if event.key == pygame.K_z: #Debug
+                manualCameraControl = Toggle(manualZoomControl)
+
             if event.key == pygame.K_SPACE:
                 for i in legsActivated:
                     legs[i].activated = False
@@ -494,7 +522,7 @@ while True:
 
 
         #Mouse Wheel (camera zoom)
-        if event.type == pygame.MOUSEWHEEL:
+        if event.type == pygame.MOUSEWHEEL and manualZoomControl:
             if mainCamera.zoom != zoomMin or event.y > 0:
                 mainCamera.zoom += event.y * zoomSpeed
 
